@@ -1,71 +1,57 @@
-# snitchlint README
+# SnitchLint: SQL Injection Linter
 
-This is the README for your extension "snitchlint". After writing up a brief description, we recommend including the following sections.
-
-## Features
-
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+SnitchLint is a Visual Studio Code extension designed to help developers identify potential SQL Injection vulnerabilities in their JavaScript and TypeScript code. It analyzes your code for user-controlled input flowing into SQL query-executing functions, helping you prevent common security flaws.
 
 ---
 
-## Following extension guidelines
+## Features
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+* **AST-based Analysis:** Utilizes TypeScript's Abstract Syntax Tree (AST) to understand code structure.
+* **Taint Tracking:** Identifies user-controlled data sources (e.g., `req.body`, `req.query`, `process.env`).
+* **Taint Propagation:** Tracks tainted data through variable assignments, concatenations, and template literals.
+* **SQL Sink Detection:** Recognizes common database query execution methods (e.g., `db.query`, `db.execute`).
+* **VS Code Diagnostics:** Highlights potential vulnerabilities directly in your editor with warnings.
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+---
 
-## Working with Markdown
+## Getting Started
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+### Prerequisites
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+* [Node.js](https://nodejs.org/) (LTS recommended)
+* [npm](https://www.npmjs.com/) (usually comes with Node.js)
+* [Visual Studio Code](https://code.visualstudio.com/)
 
-## For more information
+### Installation
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/your_username/snitchlint.git](https://github.com/your_username/snitchlint.git)
+    cd snitchlint
+    ```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+3.  **Open in VS Code:**
+    ```bash
+    code .
+    ```
+4.  **Run the Extension:** Press `F5` to open a new VS Code Extension Development Host window. Your linter will be active in this new window.
 
-**Enjoy!**
+---
+
+## Usage
+
+1.  Open any JavaScript (`.js`) or TypeScript (`.ts`) file in the **Extension Development Host** window.
+2.  SnitchLint will automatically analyze the code.
+3.  Look for **squiggly underlines** indicating potential issues. Detailed warnings will appear in the **Problems panel** (View > Problems or `Ctrl+Shift+M`/`Cmd+Shift+M`).
+
+**Example:**
+
+```typescript
+// Example: src/test/vulnerable.ts
+const userId = req.body.id; // Tainted source
+const query = `SELECT * FROM users WHERE id = '${userId}'`;
+db.query(query); // <-- SnitchLint highlights this as a potential SQL Injection
+
