@@ -1,8 +1,10 @@
 {
   "name": "snitchlint",
   "displayName": "snitchlint",
+  "publisher": "preethivhiremath",
   "description": "",
   "version": "0.0.1",
+  "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.100.0"
   },
