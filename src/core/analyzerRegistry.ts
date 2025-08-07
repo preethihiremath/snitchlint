@@ -18,7 +18,7 @@ export const analyzerRegistry: Analyzer[] = [
   commandInjectionAnalyzer,
   evalFunctionAnalyzer,
   deserializationAnalyzer,
-    weakCryptoAnalyzer,
+  weakCryptoAnalyzer,
   fileUploadAnalyzer,
   cookieFlagsAnalyzer,
   csrfAnalyzer,
