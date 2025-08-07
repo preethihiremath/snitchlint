@@ -1,12 +1,16 @@
 import * as ts from 'typescript';
 import * as vscode from 'vscode';
 import { TAINT_SOURCES, SQL_SINK_METHODS } from '../utils/astUtils';
-
+import { Analyzer } from '../core/analyzerTypes';
 
 interface TaintAnalysisContext {
   taintedVars: Set<string>;
 }
 
+export const sqlInjectionAnalyzer: Analyzer = {
+  id: "sql-injection",
+  run: analyzeSqlInjection 
+};
 /**
  * Main analysis function for SQL injection.
  */
