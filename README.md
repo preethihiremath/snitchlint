@@ -1,57 +1,111 @@
-# SnitchLint: SQL Injection Linter
+# 🕵️‍♀️ SnitchLint: The Code Snitch You’ll Love
 
-SnitchLint is a Visual Studio Code extension designed to help developers identify potential SQL Injection vulnerabilities in their JavaScript and TypeScript code. It analyzes your code for user-controlled input flowing into SQL query-executing functions, helping you prevent common security flaws.
+SnitchLint is your extra pair of 👀 inside VS Code that catches shady security stuff in your JavaScript and TypeScript files — before production says “oops 💀”.
 
----
+Whether it’s SQL injection, XSS, secret leaks, or cookie sins 🍪, we gotchu.  
 
-## Features
-
-* **AST-based Analysis:** Utilizes TypeScript's Abstract Syntax Tree (AST) to understand code structure.
-* **Taint Tracking:** Identifies user-controlled data sources (e.g., `req.body`, `req.query`, `process.env`).
-* **Taint Propagation:** Tracks tainted data through variable assignments, concatenations, and template literals.
-* **SQL Sink Detection:** Recognizes common database query execution methods (e.g., `db.query`, `db.execute`).
-* **VS Code Diagnostics:** Highlights potential vulnerabilities directly in your editor with warnings.
+> 💬 *"Write code like no one's watching. SnitchLint is."*
 
 ---
 
-## Getting Started
+## ✨ Features
 
-### Prerequisites
+🚨 **11 Powerful Security Analyzers**  
+All built with TypeScript AST wizardry + taint-flow logic:
 
-* [Node.js](https://nodejs.org/) (LTS recommended)
-* [npm](https://www.npmjs.com/) (usually comes with Node.js)
-* [Visual Studio Code](https://code.visualstudio.com/)
+| Vulnerability Type           | Detection Style |
+|-----------------------------|-----------------|
+| 💉 SQL Injection             | Taint-flow → SQL sinks |
+| 🔐 Secrets in Code           | Regex & naming patterns |
+| 🦠 Cross-Site Scripting (XSS) | DOM sinks + user input |
+| 💣 Command Injection         | `exec`, `spawn`, etc. |
+| 🧙‍♂️ Insecure `eval()` / `Function()` | Static calls on user input |
+| 📦 Insecure Deserialization | `JSON.parse` + input checks |
+| 🧊 Weak Crypto Usage         | Deprecated or insecure algos |
+| 🖼️ Unrestricted File Uploads | `req.files`, `fs.write`, etc. |
+| 🍪 Insecure Cookie Flags     | Missing `Secure` / `HttpOnly` |
+| 🛡️ No CSRF Protection        | Middleware missing or unchecked |
+| 🌐 Open Redirects            | `res.redirect(req.query)` vibes |
 
-### Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/your_username/snitchlint.git](https://github.com/your_username/snitchlint.git)
-    cd snitchlint
-    ```
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
-3.  **Open in VS Code:**
-    ```bash
-    code .
-    ```
-4.  **Run the Extension:** Press `F5` to open a new VS Code Extension Development Host window. Your linter will be active in this new window.
+🧠 **AST-based Analysis** – No regex hacks. We walk your syntax tree like it owes us money.  
+🧬 **Taint Tracking** – Follows tainted data like a chismosa (gossip queen).  
+🧪 **Real-Time VS Code Diagnostics** – Squiggles that actually mean something.  
+📎 **No setup required** – Just install, run, and boom 💥 – security insights on the fly.
 
 ---
 
-## Usage
+## 🧑‍💻 Getting Started
 
-1.  Open any JavaScript (`.js`) or TypeScript (`.ts`) file in the **Extension Development Host** window.
-2.  SnitchLint will automatically analyze the code.
-3.  Look for **squiggly underlines** indicating potential issues. Detailed warnings will appear in the **Problems panel** (View > Problems or `Ctrl+Shift+M`/`Cmd+Shift+M`).
+### 🔧 Prereqs
 
-**Example:**
+- [Node.js](https://nodejs.org/) (LTS)
+- [VS Code](https://code.visualstudio.com/)
+- Basic fear of getting hacked 😅
 
-```typescript
-// Example: src/test/vulnerable.ts
-const userId = req.body.id; // Tainted source
-const query = `SELECT * FROM users WHERE id = '${userId}'`;
-db.query(query); // <-- SnitchLint highlights this as a potential SQL Injection
+### ⚙️ Installation
 
+```bash
+git clone https://github.com/your_username/snitchlint.git
+cd snitchlint
+npm install
+code .
+```
+
+Then hit `F5` in VS Code to launch the **Extension Development Host** window 🚀
+
+---
+
+## 💻 How to Use
+
+ Install the VS code extension snitchlint, and look out for for squiggly lines & warnings in the **Problems** panel
+ SnitchLint auto-scans your code for risky business 🔍.
+
+### 🧪 Example:
+
+```ts
+const userId = req.body.id; // Tainted
+const query = `SELECT * FROM users WHERE id = '${userId}'`; // 💉 flagged!
+db.query(query);
+```
+
+---
+
+## 📜 Roadmap (Manifesto, but chill)
+
+- [x] SQL Injection detection
+- [x] XSS analyzer
+- [x] Secrets-in-code analyzer
+- [x] OWASP Top 10 coverage (see above 🔼)
+- [ ] Security report export (JSON / Markdown)
+- [ ] Confidence score system (like vibes, but coded)
+- [ ] Snitchy UI inside VS Code
+
+---
+
+## 🧠 Who's This For?
+
+- ✨ Devs who love security but hate writing it from scratch
+- 🧑‍🎓 Students learning secure coding
+- 🧑‍💼 Professionals tired of post-deploy fire drills
+
+---
+
+## 🤝 Contribute?
+
+Absolutely. Fork it, test it, snitch on code with us.
+
+---
+
+## 🐍 Want to know how it works?
+
+Refer to the howOfItAll.txt file in my repository (I'll do it soon)
+
+## 🐞 How did I publish this ? 
+
+- Sign in to https://dev.azure.com
+- Create a publisher
+- Create a persoanl access token (https://dev.azure.com)
+- install VS extensions npm install -g vsce
+- vsce login your-publisher-name
+- vsce package
+- vsce publish
