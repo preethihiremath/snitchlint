@@ -1,76 +1,117 @@
 import * as vscode from 'vscode';
-import { runDiagnostics } from './diagnostics/diagnosticRunner';
+import { scanDocument } from './engine/scanner';
+import { allSecurityRules } from './rules/registry';
+import { getConfiguration } from './config/vscodeConfiguration';
+import { findingsToDiagnostics } from './adapters/vscodeDiagnostics';
+import { SnitchLintLogger } from './logging/logger';
 
-/**
- * This function is called when the VS Code extension is activated.
- * It sets up listeners to trigger static analysis when documents are opened or changed.
- *
- * @param context VS Code extension context used for subscription and lifecycle management
- */
 export function activate(context: vscode.ExtensionContext): void {
-  const diagnosticCollection = vscode.languages.createDiagnosticCollection('snitchlint'); // Or your chosen name like 'sqlInjectionLinter'
+  const logger = new SnitchLintLogger();
+  logger.setLevel(getConfiguration().logLevel);
+  context.subscriptions.push(logger);
+
+  const diagnosticCollection = vscode.languages.createDiagnosticCollection('snitchlint');
   context.subscriptions.push(diagnosticCollection);
 
-  /**
-   * Triggers the static analysis pipeline on a given document.
-   *
-   * @param doc The text document to analyze
-   */
-  const analyzeDocument = (doc: vscode.TextDocument): void => {
-    // Only analyze JavaScript and TypeScript files, as handled in diagnosticRunner
-    if (['javascript', 'typescript'].includes(doc.languageId)) {
-        runDiagnostics(doc, diagnosticCollection);
+  let config = getConfiguration();
+
+  const runAnalysis = (doc: vscode.TextDocument): void => {
+    const langs = ['javascript', 'typescript', 'javascriptreact', 'typescriptreact'];
+    if (!langs.includes(doc.languageId)) {
+      diagnosticCollection.delete(doc.uri);
+      return;
+    }
+
+    const result = scanDocument(
+      { fileName: doc.fileName, text: doc.getText(), languageId: doc.languageId },
+      allSecurityRules,
+      config,
+      (ruleId, err) => {
+        logger.error(`Rule "${ruleId}" failed`, err);
+      }
+    );
+
+    if (result.parseFailed) {
+      logger.debug(`Could not parse ${doc.fileName} — diagnostics cleared.`);
+      diagnosticCollection.delete(doc.uri);
+      return;
+    }
+
+    diagnosticCollection.set(doc.uri, findingsToDiagnostics(doc, result.findings));
+    logger.debug(`Scan ${doc.fileName}: ${result.findings.length} finding(s)`);
+  };
+
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const scheduleAnalysis = (doc: vscode.TextDocument): void => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      runAnalysis(doc);
+      debounceTimer = undefined;
+    }, config.debounceMs);
+  };
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('snitchlint')) {
+        config = getConfiguration();
+        logger.setLevel(config.logLevel);
+        if (vscode.window.activeTextEditor) {
+          runAnalysis(vscode.window.activeTextEditor.document);
+        }
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('snitchlint.scan', () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) {
+        runAnalysis(editor.document);
+      }
+    })
+  );
+
+  const analyzeIfApplicable = (doc: vscode.TextDocument): void => {
+    const langs = ['javascript', 'typescript', 'javascriptreact', 'typescriptreact'];
+    if (langs.includes(doc.languageId)) {
+      runAnalysis(doc);
     } else {
-        // Optionally clear diagnostics for non-JS/TS files if they were previously analyzed
-        diagnosticCollection.delete(doc.uri);
+      diagnosticCollection.delete(doc.uri);
     }
   };
 
-  // Analyze all currently open documents when the extension activates
   if (vscode.window.activeTextEditor) {
-    analyzeDocument(vscode.window.activeTextEditor.document);
+    analyzeIfApplicable(vscode.window.activeTextEditor.document);
   }
-  vscode.workspace.textDocuments.forEach(analyzeDocument);
+  vscode.workspace.textDocuments.forEach(analyzeIfApplicable);
 
-
-  // Analyze when a new document is opened or focused
+  context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(analyzeIfApplicable));
   context.subscriptions.push(
-    vscode.workspace.onDidOpenTextDocument(analyzeDocument)
-  );
-  context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor(editor => {
-        if (editor) {
-            analyzeDocument(editor.document);
-        }
-    })
-  );
-
-
-  // Analyze when a document changes (with a debounce to avoid too frequent updates)
-  let timeout: NodeJS.Timeout | undefined = undefined;
-  context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument(event => {
-      if (timeout) {
-        clearTimeout(timeout);
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (editor) {
+        analyzeIfApplicable(editor.document);
       }
-      timeout = setTimeout(() => {
-        analyzeDocument(event.document);
-      }, 500); // Debounce time in milliseconds
     })
   );
 
-  // Clear diagnostics for closed documents
   context.subscriptions.push(
-      vscode.workspace.onDidCloseTextDocument(doc => diagnosticCollection.delete(doc.uri))
+    vscode.workspace.onDidChangeTextDocument((event) => {
+      scheduleAnalysis(event.document);
+    })
   );
 
-  console.log('✅ SQL Injection Linter extension activated and listening for changes.');
+  context.subscriptions.push(
+    vscode.workspace.onDidCloseTextDocument((doc) => {
+      diagnosticCollection.delete(doc.uri);
+    })
+  );
+
+  logger.info('SnitchLint activated — security analysis enabled for JS/TS.');
 }
 
-/**
- * This function is called when the extension is deactivated.
- * It can be used for cleanup if needed.
- */
 export function deactivate(): void {
-  console.log('❌ SQL Injection Linter extension deactivated.');
+  // Subscriptions disposed by VS Code
 }

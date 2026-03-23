@@ -53,6 +53,11 @@ code .
 
 Then hit `F5` in VS Code to launch the **Extension Development Host** window 🚀
 
+### Tests
+
+- **Unit tests** (engine + rules, no VS Code UI): `npm run test:unit`
+- **Integration tests** (extension host): `npm test` (downloads VS Code once; requires a display on some setups)
+
 ---
 
 ## 💻 How to Use
