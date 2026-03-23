@@ -1,43 +1,70 @@
 {
   "name": "snitchlint",
-  "displayName": "snitchlint",
+  "displayName": "SnitchLint",
   "publisher": "preethivhiremath",
-  "description": "",
-  "version": "0.0.2",
+  "description": "Static security analysis for JavaScript and TypeScript — OWASP-oriented rules with inline diagnostics in VS Code.",
+  "version": "0.1.0",
   "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
-    "Other"
+    "Linters",
+    "Programming Languages"
   ],
-  "main": "./dist/extension.js",
+  "keywords": [
+    "security",
+    "sast",
+    "owasp",
+    "sql injection",
+    "xss",
+    "lint"
+  ],
   "activationEvents": [
     "onStartupFinished"
   ],
+  "main": "./dist/extension.js",
   "contributes": {
-    "languages": [
+    "configuration": {
+      "title": "SnitchLint",
+      "properties": {
+        "snitchlint.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable SnitchLint security analysis for supported languages."
+        },
+        "snitchlint.debounceMs": {
+          "type": "number",
+          "default": 400,
+          "minimum": 50,
+          "description": "Debounce delay (ms) after edits before re-running analysis."
+        },
+        "snitchlint.logLevel": {
+          "type": "string",
+          "enum": [
+            "off",
+            "error",
+            "warn",
+            "info",
+            "debug"
+          ],
+          "default": "warn",
+          "description": "Verbosity for the SnitchLint output channel."
+        },
+        "snitchlint.rules": {
+          "type": "object",
+          "default": {},
+          "markdownDescription": "Per-rule toggles. Set a rule id to `false` to disable it (e.g. `\"snitchlint.rules\": { \"sql-injection\": false }`).",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "commands": [
       {
-        "id": "javascript",
-        "aliases": [
-          "JavaScript",
-          "js"
-        ],
-        "extensions": [
-          ".js"
-        ],
-        "configuration": "./language-configuration.json"
-      },
-      {
-        "id": "typescript",
-        "aliases": [
-          "TypeScript",
-          "ts"
-        ],
-        "extensions": [
-          ".ts"
-        ],
-        "configuration": "./language-configuration.json"
+        "command": "snitchlint.scan",
+        "title": "SnitchLint: Scan Active File"
       }
     ]
   },
@@ -51,6 +78,7 @@
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "test:unit": "npm run compile-tests && npx mocha \"out/test/unit/**/*.test.js\"",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vscode-test"
@@ -70,8 +98,5 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
-  "dependencies": {
-    "mock-require": "^3.0.3",
-    "snitchlint": "file:"
-  }
+  "dependencies": {}
 }
