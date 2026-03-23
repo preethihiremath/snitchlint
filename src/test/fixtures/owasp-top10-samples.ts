@@ -13,13 +13,24 @@ const multer = (): { single: (field: string) => unknown } => ({
   single: (_field: string) => ({}),
 });
 
+// Minimal stubs to avoid relying on Node/browser type libs in the editor/tsconfig.
+// These must keep stable identifier names so the AST-based rules can match them.
+declare const fetch: any;
+declare const console: { log: (...args: unknown[]) => void; warn?: (...args: unknown[]) => void; info?: (...args: unknown[]) => void; debug?: (...args: unknown[]) => void };
+declare const createHash: any;
+declare const exec: any;
+
+const fs = {
+  readFileSync: (_path: string): string => '',
+};
+
 // A01 — Broken access control (open redirect)
 export function redirectBad(res: { redirect: (u: string) => void }, req: { query: { next: string } }) {
   res.redirect(req.query.next);
 }
 
 // A02 — Cryptographic failures (weak hash + hardcoded secret)
-import { createHash } from 'crypto';
+const STRIPE_LIVE = 'sk_live_1234567890ABCDEF1234';
 
 export function weakHash(data: string) {
   return createHash('md5').update(data).digest('hex');
@@ -28,8 +39,6 @@ export function weakHash(data: string) {
 
 
 // A03 — Injection (SQL + XSS + command + eval)
-import { exec } from 'child_process';
-
 export function sqlSink(db: { query: (s: string) => void }, req: { body: { id: string } }) {
   const userId = req.body.id;
   const q = `SELECT * FROM u WHERE id = '${userId}'`;
@@ -78,8 +87,6 @@ export async function ssrf(req: { query: { url: string } }) {
 }
 
 // Path traversal
-import * as fs from 'fs';
-
 export function readUserPath(req: { params: { p: string } }) {
   return fs.readFileSync(req.params.p);
 }
