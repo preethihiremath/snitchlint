@@ -13,24 +13,6 @@ export const commandInjectionRule: SecurityRule = {
     const diagnostics: Finding[] = [];
     const sourceFile = ctx.sourceFile;
 
-    function reportIfUserControlled(functionName: string, node: ts.CallExpression): void {
-      const argText = node.arguments[0]?.getText(sourceFile) || '';
-      if (!/req|input|user|params/i.test(argText)) {
-        return;
-      }
-      const start = node.getStart(sourceFile);
-      const end = node.getEnd();
-      diagnostics.push({
-        ruleId: 'command-injection',
-        severity: 'error',
-        message: `Possible command injection: ${functionName} may receive untrusted input.`,
-        suggestion: 'Avoid shell execution on user data; use allowlists, fixed arguments, or safer APIs.',
-        start,
-        end,
-        owasp: 'A03:2021-Injection',
-      });
-    }
-
     function walk(node: ts.Node): void {
       if (ts.isCallExpression(node)) {
         if (ts.isPropertyAccessExpression(node.expression)) {
@@ -42,17 +24,51 @@ export const commandInjectionRule: SecurityRule = {
             (moduleName.includes('child_process') || moduleName === 'cp') &&
             SHELL_EXEC_FUNCTIONS.includes(functionName as (typeof SHELL_EXEC_FUNCTIONS)[number])
           ) {
-            reportIfUserControlled(functionName, node);
+            node.arguments.forEach((arg, index) => {
+              const origins = ctx.taint.getTaintOrigins(arg);
+              if (origins.size === 0) return;
+              const origin = origins.values().next().value as string;
+              const start = arg.getStart(sourceFile);
+              const end = arg.getEnd();
+              diagnostics.push({
+                ruleId: 'command-injection',
+                severity: 'error',
+                message: `Possible command injection: ${functionName} argument ${index + 1} is influenced by "${origin}".`,
+                suggestion: 'Avoid shell execution on user data; use allowlists, fixed arguments, or safer APIs.',
+                start,
+                end,
+                owasp: 'A03:2021-Injection',
+              });
+            });
           }
         } else if (ts.isIdentifier(node.expression)) {
           const fn = node.expression.text;
           if (SHELL_EXEC_FUNCTIONS.includes(fn as (typeof SHELL_EXEC_FUNCTIONS)[number])) {
-            reportIfUserControlled(fn, node);
+            node.arguments.forEach((arg, index) => {
+              const origins = ctx.taint.getTaintOrigins(arg);
+              if (origins.size === 0) return;
+              const origin = origins.values().next().value as string;
+              const start = arg.getStart(sourceFile);
+              const end = arg.getEnd();
+              diagnostics.push({
+                ruleId: 'command-injection',
+                severity: 'error',
+                message: `Possible command injection: ${fn} argument ${index + 1} is influenced by "${origin}".`,
+                suggestion: 'Avoid shell execution on user data; use allowlists, fixed arguments, or safer APIs.',
+                start,
+                end,
+                owasp: 'A03:2021-Injection',
+              });
+            });
           }
         }
       }
 
       ts.forEachChild(node, walk);
+    }
+
+    if (!ctx.fullText || !/req\.|request\.|params|query|body|input|user/i.test(ctx.fullText)) {
+      return diagnostics;
     }
 
     walk(sourceFile);

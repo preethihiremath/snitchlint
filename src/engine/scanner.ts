@@ -2,6 +2,7 @@ import type { Finding } from '../types';
 import type { RuleContext, SecurityRule } from '../rules/ruleTypes';
 import { createSourceFileForScan } from './createSourceFile';
 import type { SnitchLintConfiguration } from '../config/configuration';
+import { TaintAnalyzer } from './taintAnalyzer';
 
 export interface ScanInput {
   readonly fileName: string;
@@ -42,6 +43,7 @@ export function scanDocument(
     sourceFile,
     fileName: input.fileName,
     fullText: input.text,
+    taint: new TaintAnalyzer(sourceFile),
     isRuleEnabled: (ruleId: string) => config.isRuleEnabled(ruleId),
   };
 

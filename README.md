@@ -50,6 +50,8 @@ Example:
 2. Open a JavaScript/TypeScript file. SnitchLint runs automatically on open/change.
 3. View results in the *Problems* panel.
 4. Run on demand: `Command Palette` -> `SnitchLint: Scan Active File`.
+5. Ignore a finding: place `// snitchlint-ignore: <rule-id>` above the flagged line (or use the lightbulb quick fix).
+6. CI/automation: `Command Palette` -> `SnitchLint: Scan Workspace (SARIF)` to generate `snitchlint.sarif` at the workspace root.
 
 ## Testing
 

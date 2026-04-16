@@ -65,6 +65,10 @@
       {
         "command": "snitchlint.scan",
         "title": "SnitchLint: Scan Active File"
+      },
+      {
+        "command": "snitchlint.scanWorkspace",
+        "title": "SnitchLint: Scan Workspace (SARIF)"
       }
     ]
   },

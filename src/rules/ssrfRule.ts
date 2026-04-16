@@ -2,10 +2,6 @@ import * as ts from 'typescript';
 import type { Finding } from '../types';
 import type { RuleContext, SecurityRule } from './ruleTypes';
 
-function isUserInfluencedUrl(text: string): boolean {
-  return /req\.(query|body|params|url)|request\.(query|body|params|url)|params\.|query\.|body\./i.test(text);
-}
-
 export const ssrfRule: SecurityRule = {
   id: 'ssrf',
   title: 'Server-side request forgery (SSRF)',
@@ -27,8 +23,8 @@ export const ssrfRule: SecurityRule = {
         const isFetchLike = calleeText === 'fetch' || calleeText === 'get' || calleeText === 'request';
         if (isFetchLike && node.arguments.length > 0) {
           const urlArg = node.arguments[0];
-          const t = urlArg.getText(sf);
-          if (isUserInfluencedUrl(t)) {
+          const origins = ctx.taint.getTaintOrigins(urlArg);
+          if (origins.size > 0) {
             const start = urlArg.getStart(sf);
             const end = urlArg.getEnd();
             out.push({
@@ -46,6 +42,7 @@ export const ssrfRule: SecurityRule = {
       ts.forEachChild(node, walk);
     }
 
+    if (!ctx.fullText || !/req\.|request\.|params|query|body|input|user/i.test(ctx.fullText)) return [];
     walk(sf);
     return out;
   },
