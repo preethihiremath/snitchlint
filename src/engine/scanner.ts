@@ -1,8 +1,13 @@
+/**
+ * Scan orchestration — VS Code–agnostic.
+ * One AST parse and one TaintAnalyzer per document; each rule runs in isolation.
+ */
 import type { Finding } from '../types';
 import type { RuleContext, SecurityRule } from '../rules/ruleTypes';
 import { createSourceFileForScan } from './createSourceFile';
 import type { SnitchLintConfiguration } from '../config/configuration';
 import { TaintAnalyzer } from './taintAnalyzer';
+import { enrichFindings } from '../ai/findingEnricher';
 
 export interface ScanInput {
   readonly fileName: string;
@@ -19,9 +24,7 @@ function isAnalyzableLanguage(languageId: string): boolean {
   return languageId === 'javascript' || languageId === 'typescript' || languageId === 'javascriptreact' || languageId === 'typescriptreact';
 }
 
-/**
- * Runs all registered rules with shared AST and per-rule error isolation.
- */
+/** Runs all enabled rules; enriches findings with CWE/taint for the AI layer. */
 export function scanDocument(
   input: ScanInput,
   rules: readonly SecurityRule[],
@@ -60,5 +63,5 @@ export function scanDocument(
     }
   }
 
-  return { findings };
+  return { findings: enrichFindings(findings) };
 }

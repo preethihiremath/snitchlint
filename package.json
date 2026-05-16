@@ -2,8 +2,8 @@
   "name": "snitchlint",
   "displayName": "SnitchLint",
   "publisher": "preethivhiremath",
-  "description": "Static security analysis for JavaScript and TypeScript — OWASP-oriented rules with inline diagnostics in VS Code.",
-  "version": "0.1.0",
+  "description": "SAST for JavaScript/TypeScript — OWASP rules, taint analysis, AI explanations & secure fix suggestions in VS Code.",
+  "version": "0.2.0",
   "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.100.0"
@@ -18,7 +18,10 @@
     "owasp",
     "sql injection",
     "xss",
-    "lint"
+    "lint",
+    "ai",
+    "cwe",
+    "taint analysis"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -58,6 +61,26 @@
           "additionalProperties": {
             "type": "boolean"
           }
+        },
+        "snitchlint.ai.ollamaEnabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Use a local [Ollama](https://ollama.com) model to enhance explanations (free, runs on your machine). No data leaves your computer."
+        },
+        "snitchlint.ai.ollamaUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:11434",
+          "description": "Ollama API base URL."
+        },
+        "snitchlint.ai.ollamaModel": {
+          "type": "string",
+          "default": "llama3.2",
+          "description": "Ollama model name (e.g. llama3.2, phi3, codellama)."
+        },
+        "snitchlint.ai.useVsCodeLm": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Use the VS Code Language Model API when available (e.g. Copilot). Explanations work offline without this."
         }
       }
     },
@@ -69,8 +92,26 @@
       {
         "command": "snitchlint.scanWorkspace",
         "title": "SnitchLint: Scan Workspace (SARIF)"
+      },
+      {
+        "command": "snitchlint.showAiInsight",
+        "title": "SnitchLint: Explain Vulnerability & Suggest Fix",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "snitchlint.showAiInsightForDiagnostic",
+        "title": "SnitchLint: Explain (internal)"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "snitchlint.showAiInsight",
+          "when": "editorLangId =~ /javascript|typescript|javascriptreact|typescriptreact/",
+          "group": "snitchlint@1"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

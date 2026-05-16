@@ -15,11 +15,22 @@ export function getConfiguration(): SnitchLintConfiguration {
   const logLevel = config.get<SnitchLintConfiguration['logLevel']>('logLevel', 'warn');
   const ruleOverrides = readRuleOverrides(config);
 
+  const ollamaEnabled = config.get<boolean>('ai.ollamaEnabled', false);
+  const ollamaUrl = config.get<string>('ai.ollamaUrl', 'http://127.0.0.1:11434');
+  const ollamaModel = config.get<string>('ai.ollamaModel', 'llama3.2');
+  const useVsCodeLm = config.get<boolean>('ai.useVsCodeLm', false);
+
   return {
     enabled,
     debounceMs: Math.max(50, debounceMs),
     logLevel,
     ruleOverrides,
+    ai: {
+      ollamaEnabled,
+      ollamaUrl,
+      ollamaModel,
+      useVsCodeLm,
+    },
     isRuleEnabled(ruleId: string): boolean {
       if (!enabled) {
         return false;

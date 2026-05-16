@@ -1,3 +1,4 @@
+/** Maps engine Finding[] to vscode.Diagnostic[] for the Problems panel; honors snitchlint-ignore. */
 import * as vscode from 'vscode';
 import type { Finding, RuleSeverity } from '../types';
 

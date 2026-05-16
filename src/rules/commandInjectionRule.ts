@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import type { Finding } from '../types';
 import type { RuleContext, SecurityRule } from './ruleTypes';
+import { buildTaintFinding } from './findingHelpers';
 
 const SHELL_EXEC_FUNCTIONS = ['exec', 'execSync', 'spawn', 'spawnSync'] as const;
 
@@ -27,18 +28,22 @@ export const commandInjectionRule: SecurityRule = {
             node.arguments.forEach((arg, index) => {
               const origins = ctx.taint.getTaintOrigins(arg);
               if (origins.size === 0) return;
-              const origin = origins.values().next().value as string;
               const start = arg.getStart(sourceFile);
               const end = arg.getEnd();
-              diagnostics.push({
-                ruleId: 'command-injection',
-                severity: 'error',
-                message: `Possible command injection: ${functionName} argument ${index + 1} is influenced by "${origin}".`,
-                suggestion: 'Avoid shell execution on user data; use allowlists, fixed arguments, or safer APIs.',
-                start,
-                end,
-                owasp: 'A03:2021-Injection',
-              });
+              diagnostics.push(
+                buildTaintFinding({
+                  ruleId: 'command-injection',
+                  severity: 'error',
+                  message: `Possible command injection: ${functionName} argument ${index + 1} is influenced by "${[...origins][0]}".`,
+                  suggestion: 'Avoid shell execution on user data; use allowlists, fixed arguments, or safer APIs.',
+                  start,
+                  end,
+                  owasp: 'A03:2021-Injection',
+                  origins,
+                  sinkApi: `${moduleName}.${functionName}`,
+                  sinkCode: node.getText(sourceFile),
+                })
+              );
             });
           }
         } else if (ts.isIdentifier(node.expression)) {
@@ -47,18 +52,22 @@ export const commandInjectionRule: SecurityRule = {
             node.arguments.forEach((arg, index) => {
               const origins = ctx.taint.getTaintOrigins(arg);
               if (origins.size === 0) return;
-              const origin = origins.values().next().value as string;
               const start = arg.getStart(sourceFile);
               const end = arg.getEnd();
-              diagnostics.push({
-                ruleId: 'command-injection',
-                severity: 'error',
-                message: `Possible command injection: ${fn} argument ${index + 1} is influenced by "${origin}".`,
-                suggestion: 'Avoid shell execution on user data; use allowlists, fixed arguments, or safer APIs.',
-                start,
-                end,
-                owasp: 'A03:2021-Injection',
-              });
+              diagnostics.push(
+                buildTaintFinding({
+                  ruleId: 'command-injection',
+                  severity: 'error',
+                  message: `Possible command injection: ${fn} argument ${index + 1} is influenced by "${[...origins][0]}".`,
+                  suggestion: 'Avoid shell execution on user data; use allowlists, fixed arguments, or safer APIs.',
+                  start,
+                  end,
+                  owasp: 'A03:2021-Injection',
+                  origins,
+                  sinkApi: fn,
+                  sinkCode: node.getText(sourceFile),
+                })
+              );
             });
           }
         }

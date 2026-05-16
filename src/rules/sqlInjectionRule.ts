@@ -2,7 +2,9 @@ import * as ts from 'typescript';
 import type { Finding } from '../types';
 import type { RuleContext, SecurityRule } from './ruleTypes';
 import { TAINT_SOURCES, SQL_SINK_METHODS } from './constants';
+import { buildTaintFinding } from './findingHelpers';
 
+/** Flags tainted arguments passed to common SQL driver methods (query, execute, raw, …). */
 export const sqlInjectionRule: SecurityRule = {
   id: 'sql-injection',
   title: 'SQL injection',
@@ -19,18 +21,24 @@ export const sqlInjectionRule: SecurityRule = {
           node.arguments.forEach((arg, index) => {
             const origins = ctx.taint.getTaintOrigins(arg);
             if (origins.size === 0) return;
-            const origin = origins.values().next().value as string;
             const start = arg.getStart(sf);
             const end = arg.getEnd();
-            diagnostics.push({
-              ruleId: 'sql-injection',
-              severity: 'warning',
-              message: `Potential SQL injection: tainted data from "${origin}" reaches SQL method "${methodName}" (argument ${index + 1}).`,
-              suggestion: 'Use parameterized queries / prepared statements; never concatenate user input into SQL.',
-              start,
-              end,
-              owasp: 'A03:2021-Injection',
-            });
+            const sinkCode = node.getText(sf);
+            diagnostics.push(
+              buildTaintFinding({
+                ruleId: 'sql-injection',
+                severity: 'warning',
+                message: `Potential SQL injection: tainted data from "${[...origins][0]}" reaches SQL method "${methodName}" (argument ${index + 1}).`,
+                suggestion: 'Use parameterized queries / prepared statements; never concatenate user input into SQL.',
+                start,
+                end,
+                owasp: 'A03:2021-Injection',
+                origins,
+                sinkApi: methodName,
+                sinkCode,
+                propagationNotes: ['Value may flow through variables or function returns without sanitization'],
+              })
+            );
           });
         }
       }

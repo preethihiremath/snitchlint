@@ -1,1 +1,7 @@
-export type { Finding, OwaspCategory, RuleSeverity } from './findings';
+export type {
+  Finding,
+  OwaspCategory,
+  RuleSeverity,
+  TaintFlowStep,
+  TaintFlowStepKind,
+} from './findings';

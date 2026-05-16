@@ -1,9 +1,20 @@
+/**
+ * VS Code extension entry point.
+ *
+ * Responsibilities:
+ * - Subscribe to document open/change/active editor events
+ * - Run scanDocument() and push results to the Problems panel
+ * - Cache findings per URI (versioned) for the AI Insight panel
+ * - Register commands: scan, SARIF export, explain & suggest fix
+ * - Provide code actions: ignore directive + open AI panel
+ */
 import * as vscode from 'vscode';
 import { scanDocument } from './engine/scanner';
 import { allSecurityRules } from './rules/registry';
 import { getConfiguration } from './config/vscodeConfiguration';
 import { findingsToDiagnostics } from './adapters/vscodeDiagnostics';
 import { SnitchLintLogger } from './logging/logger';
+import { AiInsightPanel, type AiInsightPayload } from './ui/aiInsightPanel';
 import type { Finding } from './types';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -15,8 +26,10 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(diagnosticCollection);
 
   let config = getConfiguration();
+  /** Last scan per file; document.version invalidates cache on edit. */
   const scanCache = new Map<string, { version: number; findings: readonly Finding[] }>();
 
+  /** Parse + run rules + set diagnostics; skips unsupported languages. */
   const runAnalysis = (doc: vscode.TextDocument): void => {
     const langs = ['javascript', 'typescript', 'javascriptreact', 'typescriptreact'];
     if (!langs.includes(doc.languageId)) {
@@ -86,6 +99,78 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
+  /** Resolve the Finding under the cursor from the cached scan (for AI panel). */
+  const findFindingAtPosition = (
+    doc: vscode.TextDocument,
+    position: vscode.Position
+  ): Finding | undefined => {
+    const offset = doc.offsetAt(position);
+    const cached = scanCache.get(doc.uri.toString());
+    if (!cached) return undefined;
+    return cached.findings.find((f) => offset >= f.start && offset <= f.end);
+  };
+
+  /** Replace the entire line containing the finding when fix.canApply is true. */
+  const applyFixToEditor = async (payload: AiInsightPayload): Promise<void> => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || !payload.fix.canApply) {
+      return;
+    }
+    const doc = editor.document;
+    const line = doc.lineAt(doc.positionAt(payload.findingStart).line);
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(doc.uri, line.range, payload.fix.after);
+    const ok = await vscode.workspace.applyEdit(edit);
+    if (ok) {
+      vscode.window.showInformationMessage('SnitchLint: Secure fix applied.');
+      runAnalysis(doc);
+    }
+  };
+
+  const showAiInsight = async (finding?: Finding): Promise<void> => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showWarningMessage('SnitchLint: Open a JS/TS file to view AI security insight.');
+      return;
+    }
+    const doc = editor.document;
+    const target =
+      finding ??
+      (editor.selection.isEmpty
+        ? findFindingAtPosition(doc, editor.selection.active)
+        : scanCache
+            .get(doc.uri.toString())
+            ?.findings.find((f) => {
+              const selStart = doc.offsetAt(editor.selection.start);
+              const selEnd = doc.offsetAt(editor.selection.end);
+              return f.start <= selEnd && f.end >= selStart;
+            }));
+
+    if (!target) {
+      vscode.window.showWarningMessage(
+        'SnitchLint: Place the cursor on a SnitchLint finding (Problems panel) and try again.'
+      );
+      return;
+    }
+
+    await AiInsightPanel.show(
+      context,
+      doc,
+      target,
+      {
+        ollamaEnabled: config.ai.ollamaEnabled,
+        ollamaUrl: config.ai.ollamaUrl,
+        ollamaModel: config.ai.ollamaModel,
+        useVsCodeLm: config.ai.useVsCodeLm,
+      },
+      applyFixToEditor
+    );
+  };
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('snitchlint.showAiInsight', () => showAiInsight())
+  );
+
   // Quick Fix: insert `snitchlint-ignore: <ruleId>` above the diagnostic line.
   const hasIgnore = (document: vscode.TextDocument, line: number, ruleId: string): boolean => {
     for (let l = Math.max(0, line); l >= Math.max(0, line - 1); l--) {
@@ -119,6 +204,18 @@ export function activate(context: vscode.ExtensionContext): void {
         action.diagnostics = [diag];
         action.isPreferred = true;
         actions.push(action);
+
+        const explainAction = new vscode.CodeAction(
+          'SnitchLint: Explain & Suggest Fix',
+          vscode.CodeActionKind.Empty
+        );
+        explainAction.command = {
+          title: 'Explain & Suggest Fix',
+          command: 'snitchlint.showAiInsightForDiagnostic',
+          arguments: [document.uri.toString(), diag.range.start.line, diag.range.start.character, ruleId],
+        };
+        explainAction.diagnostics = [diag];
+        actions.push(explainAction);
       }
       return actions;
     },
@@ -128,7 +225,30 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.languages.registerCodeActionsProvider(
       ['javascript', 'typescript', 'javascriptreact', 'typescriptreact'],
       codeActionProvider,
-      { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }
+      { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix, vscode.CodeActionKind.Empty] }
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'snitchlint.showAiInsightForDiagnostic',
+      async (uriStr: string, line: number, character: number, ruleId: string) => {
+        const uri = vscode.Uri.parse(uriStr);
+        const doc = await vscode.workspace.openTextDocument(uri);
+        const pos = new vscode.Position(line, character);
+        const offset = doc.offsetAt(pos);
+        const cached = scanCache.get(uriStr);
+        const finding = cached?.findings.find(
+          (f) => f.ruleId === ruleId && offset >= f.start && offset <= f.end
+        );
+        if (finding) {
+          await vscode.window.showTextDocument(doc, { selection: new vscode.Range(pos, pos) });
+          await showAiInsight(finding);
+        } else {
+          runAnalysis(doc);
+          vscode.window.showWarningMessage('SnitchLint: Re-scan the file and try again.');
+        }
+      }
     )
   );
 

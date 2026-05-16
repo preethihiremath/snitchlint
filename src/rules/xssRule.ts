@@ -2,6 +2,7 @@ import * as ts from 'typescript';
 import type { Finding } from '../types';
 import type { RuleContext, SecurityRule } from './ruleTypes';
 import { TAINT_SOURCES } from './constants';
+import { buildTaintFinding } from './findingHelpers';
 
 export const xssRule: SecurityRule = {
   id: 'xss',
@@ -24,15 +25,20 @@ export const xssRule: SecurityRule = {
         if (origins.size > 0) {
           const start = rhs.getStart(sourceFile);
           const end = rhs.getEnd();
-          diagnostics.push({
-            ruleId: 'xss',
-            severity: 'warning',
-            message: 'Potential XSS: assigning untrusted data to innerHTML.',
-            suggestion: 'Use textContent, sanitize HTML with a trusted library, or framework-safe bindings.',
-            start,
-            end,
-            owasp: 'A03:2021-Injection',
-          });
+          diagnostics.push(
+            buildTaintFinding({
+              ruleId: 'xss',
+              severity: 'warning',
+              message: 'Potential XSS: assigning untrusted data to innerHTML.',
+              suggestion: 'Use textContent, sanitize HTML with a trusted library, or framework-safe bindings.',
+              start,
+              end,
+              owasp: 'A03:2021-Injection',
+              origins,
+              sinkApi: 'element.innerHTML',
+              sinkCode: node.getText(sourceFile),
+            })
+          );
         }
       }
 
@@ -47,15 +53,20 @@ export const xssRule: SecurityRule = {
           if (origins.size > 0) {
             const start = arg.getStart(sourceFile);
             const end = arg.getEnd();
-            diagnostics.push({
-              ruleId: 'xss',
-              severity: 'warning',
-              message: 'Potential XSS: document.write with user-influenced content.',
-              suggestion: 'Avoid document.write; use safe DOM APIs and sanitization.',
-              start,
-              end,
-              owasp: 'A03:2021-Injection',
-            });
+            diagnostics.push(
+              buildTaintFinding({
+                ruleId: 'xss',
+                severity: 'warning',
+                message: 'Potential XSS: document.write with user-influenced content.',
+                suggestion: 'Avoid document.write; use safe DOM APIs and sanitization.',
+                start,
+                end,
+                owasp: 'A03:2021-Injection',
+                origins,
+                sinkApi: 'document.write',
+                sinkCode: node.getText(sourceFile),
+              })
+            );
           }
         }
       }

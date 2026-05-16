@@ -1,3 +1,4 @@
+/** Central rule list — import new rules here and add to allSecurityRules. */
 import type { SecurityRule } from './ruleTypes';
 import { sqlInjectionRule } from './sqlInjectionRule';
 import { xssRule } from './xssRule';

@@ -4,6 +4,23 @@ All notable changes to the "snitchlint" extension will be documented in this fil
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.2.0] - 2026-05-16
+
+## Added
+
+- **AI Insight panel**: vulnerability explanation, taint flow (source → propagation → sink), OWASP + CWE mapping, risky API/patterns.
+- **AI fix suggestions**: rule-specific before/after code with optional **Apply fix** in the editor.
+- CWE and vulnerability-type metadata for all 16 rules (`src/metadata/ruleMetadata.ts`).
+- Structured taint findings via `buildTaintFinding()` for SQLi, XSS, and command injection rules.
+- Optional enhancement: **Ollama** (local, free) and **VS Code Language Model API** settings under `snitchlint.ai.*`.
+- Commands: `SnitchLint: Explain Vulnerability & Suggest Fix`, code action on diagnostics, editor context menu.
+- Unit tests for explanation, enricher, and fix builders.
+
+## Changed
+
+- `Finding` type extended with `taintFlow`, `cweId`, `cweName`, `vulnerabilityType`, `riskyApi`.
+- Scanner post-processes findings through `enrichFindings()`.
+
 ## [0.1.0] - 2026-03-22
 
 ## Added
