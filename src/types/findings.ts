@@ -1,5 +1,6 @@
 /**
  * Core finding model — independent of VS Code for unit testing and reuse.
+ * Extended in v0.2 with taintFlow + CWE fields for the AI Insight panel.
  */
 
 export type RuleSeverity = 'error' | 'warning' | 'information' | 'hint';
@@ -17,6 +18,16 @@ export type OwaspCategory =
   | 'A09:2021-Security Logging and Monitoring Failures'
   | 'A10:2021-Server-Side Request Forgery';
 
+export type TaintFlowStepKind = 'source' | 'propagation' | 'sink';
+
+/** One step in source → propagation → sink data flow. */
+export interface TaintFlowStep {
+  readonly kind: TaintFlowStepKind;
+  readonly description: string;
+  /** Optional code fragment for this step. */
+  readonly code?: string;
+}
+
 export interface Finding {
   readonly ruleId: string;
   readonly severity: RuleSeverity;
@@ -28,4 +39,10 @@ export interface Finding {
   readonly start: number;
   readonly end: number;
   readonly owasp?: OwaspCategory;
+  /** Human-readable vulnerability class (e.g. SQL Injection). */
+  readonly vulnerabilityType?: string;
+  readonly cweId?: string;
+  readonly cweName?: string;
+  readonly riskyApi?: string;
+  readonly taintFlow?: readonly TaintFlowStep[];
 }

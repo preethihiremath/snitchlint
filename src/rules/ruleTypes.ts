@@ -1,5 +1,6 @@
 import type * as ts from 'typescript';
 import type { Finding, OwaspCategory } from '../types';
+import type { TaintAnalyzer } from '../engine/taintAnalyzer';
 
 /**
  * Context passed to every rule — one AST parse per document, shared across rules.
@@ -8,6 +9,7 @@ export interface RuleContext {
   readonly sourceFile: ts.SourceFile;
   readonly fileName: string;
   readonly fullText: string;
+  readonly taint: TaintAnalyzer;
   isRuleEnabled(ruleId: string): boolean;
 }
 

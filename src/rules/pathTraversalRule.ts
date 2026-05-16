@@ -4,10 +4,6 @@ import type { RuleContext, SecurityRule } from './ruleTypes';
 
 const FS_READ_NAMES = ['readFile', 'readFileSync', 'createReadStream', 'open', 'openSync', 'readdir', 'readdirSync'] as const;
 
-function looksUserControlled(text: string): boolean {
-  return /req\.|request\.|params|query|body|input|userId|filename/i.test(text);
-}
-
 export const pathTraversalRule: SecurityRule = {
   id: 'path-traversal',
   title: 'Path traversal',
@@ -23,8 +19,8 @@ export const pathTraversalRule: SecurityRule = {
         if (FS_READ_NAMES.includes(method as (typeof FS_READ_NAMES)[number])) {
           const arg0 = node.arguments[0];
           if (arg0) {
-            const t = arg0.getText(sf);
-            if (looksUserControlled(t)) {
+            const origins = ctx.taint.getTaintOrigins(arg0);
+            if (origins.size > 0) {
               const start = arg0.getStart(sf);
               const end = arg0.getEnd();
               out.push({
@@ -43,6 +39,7 @@ export const pathTraversalRule: SecurityRule = {
       ts.forEachChild(node, walk);
     }
 
+    if (!ctx.fullText || !/req\.|request\.|params|query|body|input|user/i.test(ctx.fullText)) return [];
     walk(sf);
     return out;
   },

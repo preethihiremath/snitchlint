@@ -18,8 +18,10 @@ export const deserializationRule: SecurityRule = {
         node.expression.expression.getText(sourceFile) === 'JSON' &&
         node.expression.name.getText(sourceFile) === 'parse'
       ) {
-        const argText = node.arguments[0]?.getText(sourceFile) || '';
-        if (/req|input|param|user/i.test(argText)) {
+        const arg0 = node.arguments[0];
+        if (arg0) {
+          const origins = ctx.taint.getTaintOrigins(arg0);
+          if (origins.size > 0) {
           const start = node.getStart(sourceFile);
           const end = node.getEnd();
           diagnostics.push({
@@ -31,12 +33,14 @@ export const deserializationRule: SecurityRule = {
             end,
             owasp: 'A08:2021-Software and Data Integrity Failures',
           });
+          }
         }
       }
 
       ts.forEachChild(node, walk);
     }
 
+    if (!ctx.fullText || !/req\.|request\.|params|query|body|input|user/i.test(ctx.fullText)) return [];
     walk(sourceFile);
     return diagnostics;
   },
